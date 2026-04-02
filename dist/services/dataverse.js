@@ -1,0 +1,97 @@
+import { ConfidentialClientApplication, } from "@azure/msal-node";
+import axios, { AxiosError } from "axios";
+import { DATAVERSE_API_VERSION, REQUEST_TIMEOUT_MS } from "../constants.js";
+export function getRequiredEnv(name) {
+    const value = process.env[name];
+    if (!value) {
+        throw new Error(`Required environment variable "${name}" is not set.`);
+    }
+    return value;
+}
+export class DataverseClient {
+    baseUrl;
+    apiBase;
+    msalApp;
+    scope;
+    http;
+    constructor() {
+        const dataverseUrl = getRequiredEnv("DATAVERSE_URL").replace(/\/$/, "");
+        const tenantId = getRequiredEnv("AZURE_TENANT_ID");
+        const clientId = getRequiredEnv("AZURE_CLIENT_ID");
+        const clientSecret = getRequiredEnv("AZURE_CLIENT_SECRET");
+        this.baseUrl = dataverseUrl;
+        this.apiBase = `${dataverseUrl}/api/data/v${DATAVERSE_API_VERSION}`;
+        this.scope = `${dataverseUrl}/.default`;
+        const msalConfig = {
+            auth: {
+                clientId,
+                clientSecret,
+                authority: `https://login.microsoftonline.com/${tenantId}`,
+            },
+        };
+        this.msalApp = new ConfidentialClientApplication(msalConfig);
+        this.http = axios.create({
+            baseURL: this.apiBase,
+            timeout: REQUEST_TIMEOUT_MS,
+            headers: {
+                "Accept": "application/json",
+                "OData-MaxVersion": "4.0",
+                "OData-Version": "4.0",
+            },
+        });
+    }
+    async getAccessToken() {
+        const result = await this.msalApp.acquireTokenByClientCredential({
+            scopes: [this.scope],
+        });
+        if (!result?.accessToken) {
+            throw new Error("Failed to acquire access token from Microsoft Entra ID.");
+        }
+        return result.accessToken;
+    }
+    async get(path, params) {
+        const token = await this.getAccessToken();
+        const response = await this.http.get(path, {
+            params,
+            headers: {
+                Authorization: `Bearer ${token}`,
+                Prefer: 'odata.include-annotations="OData.Community.Display.V1.FormattedValue"',
+            },
+        });
+        return response.data;
+    }
+    async getCollection(path, params) {
+        return this.get(path, params);
+    }
+}
+export function handleApiError(error) {
+    if (error instanceof AxiosError) {
+        if (error.response) {
+            const status = error.response.status;
+            const message = error.response.data?.error
+                ?.message ?? error.message;
+            switch (status) {
+                case 400:
+                    return `Error 400 Bad Request: ${message}. Check your filter or query syntax.`;
+                case 401:
+                    return "Error 401 Unauthorized: Authentication failed. Check AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, and AZURE_TENANT_ID.";
+                case 403:
+                    return "Error 403 Forbidden: The application user lacks required Dataverse security role privileges.";
+                case 404:
+                    return `Error 404 Not Found: ${message}. Check entity_set_name or entity_name.`;
+                case 429:
+                    return "Error 429 Too Many Requests: Dataverse API rate limit exceeded. Retry after a short delay.";
+                default:
+                    return `Error ${status}: ${message}`;
+            }
+        }
+        else if (error.code === "ECONNABORTED") {
+            return `Error: Request timed out after ${REQUEST_TIMEOUT_MS / 1000}s. Try a more specific query or smaller $top value.`;
+        }
+        else if (error.code === "ENOTFOUND") {
+            return `Error: Cannot reach Dataverse at "${process.env["DATAVERSE_URL"]}". Check DATAVERSE_URL and network connectivity.`;
+        }
+    }
+    return `Error: ${error instanceof Error ? error.message : String(error)}`;
+}
+//# sourceMappingURL=dataverse.js.map
