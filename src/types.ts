@@ -27,6 +27,7 @@ export interface AttributeMetadata {
   MaxValue?: number;
   IsPrimaryId?: boolean;
   IsPrimaryName?: boolean;
+  Description?: Label;
 }
 
 export interface RelationshipMetadata {

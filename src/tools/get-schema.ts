@@ -81,7 +81,7 @@ async function getEntitySchema(
 
   if (includeColumns) {
     expandParts.push(
-      "Attributes($select=LogicalName,SchemaName,DisplayName,AttributeType,AttributeOf,IsLogical,IsValidODataAttribute,IsValidForRead,IsValidForCreate,IsValidForUpdate,RequiredLevel,IsPrimaryId,IsPrimaryName)"
+      "Attributes($select=LogicalName,SchemaName,DisplayName,AttributeType,AttributeOf,IsLogical,IsValidODataAttribute,IsValidForRead,IsValidForCreate,IsValidForUpdate,RequiredLevel,IsPrimaryId,IsPrimaryName,Description)"
     );
   }
 
@@ -135,8 +135,8 @@ async function getEntitySchema(
 
   if (includeColumns && entity.Attributes && entity.Attributes.length > 0) {
     lines.push("", `## Columns (${entity.Attributes.length})`, "");
-    lines.push("| Logical Name | Display Name | Type | Required | Readable | Creatable | Updatable |");
-    lines.push("|---|---|---|---|---|---|---|");
+    lines.push("| Logical Name | Display Name | Type | Required | Readable | Creatable | Updatable | Description |");
+    lines.push("|---|---|---|---|---|---|---|---|");
 
     const sorted = [...entity.Attributes].sort((a, b) =>
       a.LogicalName.localeCompare(b.LogicalName)
@@ -144,8 +144,9 @@ async function getEntitySchema(
 
     for (const attr of sorted) {
       const req = attr.RequiredLevel?.Value ?? "";
+      const desc = getLabel(attr.Description);
       lines.push(
-        `| \`${attr.LogicalName}\` | ${getLabel(attr.DisplayName)} | ${formatAttributeType(attr)} | ${req} | ${attr.IsValidForRead ? "✓" : ""} | ${attr.IsValidForCreate ? "✓" : ""} | ${attr.IsValidForUpdate ? "✓" : ""} |`
+        `| \`${attr.LogicalName}\` | ${getLabel(attr.DisplayName)} | ${formatAttributeType(attr)} | ${req} | ${attr.IsValidForRead ? "✓" : ""} | ${attr.IsValidForCreate ? "✓" : ""} | ${attr.IsValidForUpdate ? "✓" : ""} | ${desc} |`
       );
     }
   }
