@@ -8,7 +8,6 @@ import type {
   EntityListItem,
   EntityMetadata,
   Label,
-  ODataCollectionResponse,
   RelationshipMetadata,
 } from "../types.js";
 
@@ -19,11 +18,7 @@ function getLabel(label?: Label): string {
 }
 
 function formatAttributeType(attr: AttributeMetadata): string {
-  const base = attr.AttributeType ?? "Unknown";
-  if (attr.MaxLength !== undefined) return `${base}(${attr.MaxLength})`;
-  if (attr.MinValue !== undefined && attr.MaxValue !== undefined)
-    return `${base}[${attr.MinValue}..${attr.MaxValue}]`;
-  return base;
+  return attr.AttributeType ?? "Unknown";
 }
 
 // ─── List all tables ──────────────────────────────────────────────────────────
@@ -37,7 +32,6 @@ async function listEntities(
     {
       $select:
         "LogicalName,DisplayName,EntitySetName,PrimaryIdAttribute,PrimaryNameAttribute,IsCustomEntity",
-      $orderby: "LogicalName asc",
     }
   );
 
@@ -78,7 +72,7 @@ async function getEntitySchema(
 
   if (includeColumns) {
     expandParts.push(
-      "Attributes($select=LogicalName,SchemaName,DisplayName,AttributeType,IsValidForRead,IsValidForCreate,IsValidForUpdate,RequiredLevel,MaxLength,MinValue,MaxValue,IsPrimaryId,IsPrimaryName)"
+      "Attributes($select=LogicalName,SchemaName,DisplayName,AttributeType,IsValidForRead,IsValidForCreate,IsValidForUpdate,RequiredLevel,IsPrimaryId,IsPrimaryName)"
     );
   }
 

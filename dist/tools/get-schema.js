@@ -6,18 +6,12 @@ function getLabel(label) {
     return label?.UserLocalizedLabel?.Label ?? "";
 }
 function formatAttributeType(attr) {
-    const base = attr.AttributeType ?? "Unknown";
-    if (attr.MaxLength !== undefined)
-        return `${base}(${attr.MaxLength})`;
-    if (attr.MinValue !== undefined && attr.MaxValue !== undefined)
-        return `${base}[${attr.MinValue}..${attr.MaxValue}]`;
-    return base;
+    return attr.AttributeType ?? "Unknown";
 }
 // ─── List all tables ──────────────────────────────────────────────────────────
 async function listEntities(client, format) {
     const response = await client.getCollection("/EntityDefinitions", {
         $select: "LogicalName,DisplayName,EntitySetName,PrimaryIdAttribute,PrimaryNameAttribute,IsCustomEntity",
-        $orderby: "LogicalName asc",
     });
     const entities = response.value;
     if (format === ResponseFormat.JSON) {
@@ -40,7 +34,7 @@ async function listEntities(client, format) {
 async function getEntitySchema(client, entityName, includeColumns, includeRelationships, format) {
     const expandParts = [];
     if (includeColumns) {
-        expandParts.push("Attributes($select=LogicalName,SchemaName,DisplayName,AttributeType,IsValidForRead,IsValidForCreate,IsValidForUpdate,RequiredLevel,MaxLength,MinValue,MaxValue,IsPrimaryId,IsPrimaryName)");
+        expandParts.push("Attributes($select=LogicalName,SchemaName,DisplayName,AttributeType,IsValidForRead,IsValidForCreate,IsValidForUpdate,RequiredLevel,IsPrimaryId,IsPrimaryName)");
     }
     if (includeRelationships) {
         expandParts.push("OneToManyRelationships($select=SchemaName,ReferencedEntity,ReferencingEntity,ReferencedAttribute,ReferencingAttribute)", "ManyToOneRelationships($select=SchemaName,ReferencedEntity,ReferencingEntity,ReferencedAttribute,ReferencingAttribute)", "ManyToManyRelationships($select=SchemaName,Entity1LogicalName,Entity2LogicalName)");
