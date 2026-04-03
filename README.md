@@ -23,7 +23,7 @@ MCP (Model Context Protocol) сервер для чтения данных и с
 | Параметр | Тип | По умолчанию | Описание |
 |---|---|---|---|
 | `entity_name` | string | — | Logical name таблицы (`account`, `contact`, `opportunity`). Без него — список всех таблиц |
-| `include_columns` | boolean | `true` | Включить метаданные колонок (тип, обязательность, флаги чтения/записи) |
+| `include_columns` | boolean | `true` | Включить метаданные колонок (тип, обязательность, флаги чтения/записи). Виртуальные и неqueryable companion/display-атрибуты исключаются |
 | `include_relationships` | boolean | `false` | Включить связи 1:N, N:1, N:N |
 | `response_format` | `markdown` \| `json` | `markdown` | Формат ответа |
 

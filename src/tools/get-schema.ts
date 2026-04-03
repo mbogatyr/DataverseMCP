@@ -21,6 +21,15 @@ function formatAttributeType(attr: AttributeMetadata): string {
   return attr.AttributeType ?? "Unknown";
 }
 
+function isQueryableAttribute(attr: AttributeMetadata): boolean {
+  if (attr.AttributeType === "Virtual") return false;
+  if (attr.IsValidForRead === false) return false;
+  if (attr.IsValidODataAttribute === false) return false;
+  if (attr.AttributeOf) return false;
+
+  return true;
+}
+
 // ─── List all tables ──────────────────────────────────────────────────────────
 
 async function listEntities(
@@ -72,7 +81,7 @@ async function getEntitySchema(
 
   if (includeColumns) {
     expandParts.push(
-      "Attributes($select=LogicalName,SchemaName,DisplayName,AttributeType,IsValidForRead,IsValidForCreate,IsValidForUpdate,RequiredLevel,IsPrimaryId,IsPrimaryName)"
+      "Attributes($select=LogicalName,SchemaName,DisplayName,AttributeType,AttributeOf,IsLogical,IsValidODataAttribute,IsValidForRead,IsValidForCreate,IsValidForUpdate,RequiredLevel,IsPrimaryId,IsPrimaryName)"
     );
   }
 
@@ -97,6 +106,10 @@ async function getEntitySchema(
     `/EntityDefinitions(LogicalName='${entityName}')`,
     params
   );
+
+  if (includeColumns && entity.Attributes) {
+    entity.Attributes = entity.Attributes.filter(isQueryableAttribute);
+  }
 
   if (format === ResponseFormat.JSON) {
     return { text: truncate(JSON.stringify(entity, null, 2)), data: entity };
@@ -203,7 +216,7 @@ Two modes:
 
 Args:
   - entity_name (string, optional): Logical name of the table (e.g. 'account', 'contact', 'opportunity'). Omit to list all tables.
-  - include_columns (boolean, default: true): Return column definitions (type, required level, read/write flags). Only used when entity_name is specified.
+  - include_columns (boolean, default: true): Return column definitions (type, required level, read/write flags). Only used when entity_name is specified. Non-queryable companion/display attributes are excluded from column output.
   - include_relationships (boolean, default: false): Return 1:N, N:1 and N:N relationship metadata. Only used when entity_name is specified.
   - response_format ('markdown'|'json', default: 'markdown'): Output format.
 

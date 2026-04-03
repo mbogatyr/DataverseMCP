@@ -11,6 +11,9 @@ export interface AttributeMetadata {
     SchemaName: string;
     DisplayName?: Label;
     AttributeType: string;
+    AttributeOf?: string;
+    IsLogical?: boolean;
+    IsValidODataAttribute?: boolean;
     IsValidForRead?: boolean;
     IsValidForCreate?: boolean;
     IsValidForUpdate?: boolean;
