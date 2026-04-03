@@ -1,56 +1,66 @@
 # dataverse-mcp-server
 
-MCP (Model Context Protocol) сервер для чтения данных и схемы из Microsoft Dataverse через Web API.
+MCP (Model Context Protocol) server for reading Microsoft Dataverse schema and data through the Dataverse Web API.
 
-## Инструменты
+## Features
 
-### `dataverse_get_schema` — чтение схемы
+- List Dataverse tables and inspect table metadata
+- Return practical, query-oriented columns for a specific table
+- Exclude non-queryable companion/display attributes from schema output
+- Query table records with OData-style filtering, sorting, paging, and field selection
 
-Возвращает метаданные таблиц Dataverse.
+## Tools
 
-**Режим 1: список всех таблиц** — не указывайте `entity_name`:
+### `dataverse_get_schema`
 
+Returns Dataverse metadata.
+
+Modes:
+
+1. List all tables: omit `entity_name`
+2. Inspect one table: provide `entity_name`
+
+Example prompts:
+
+```text
+What tables are available in Dataverse?
 ```
-Какие таблицы есть в Dataverse?
+
+```text
+Show the schema for the account table with columns and relationships
 ```
 
-**Режим 2: схема конкретной таблицы** — укажите `entity_name`:
-
-```
-Покажи схему таблицы account с колонками и связями
-```
-
-| Параметр | Тип | По умолчанию | Описание |
+| Parameter | Type | Default | Description |
 |---|---|---|---|
-| `entity_name` | string | — | Logical name таблицы (`account`, `contact`, `opportunity`). Без него — список всех таблиц |
-| `include_columns` | boolean | `true` | Включить метаданные колонок (тип, обязательность, флаги чтения/записи). Виртуальные и неqueryable companion/display-атрибуты исключаются |
-| `include_relationships` | boolean | `false` | Включить связи 1:N, N:1, N:N |
-| `response_format` | `markdown` \| `json` | `markdown` | Формат ответа |
+| `entity_name` | string | — | Table logical name, for example `account`, `contact`, `opportunity`. Omit it to list all tables |
+| `include_columns` | boolean | `true` | Include column metadata such as type, required level, and read/write flags. Virtual and non-queryable companion/display attributes are excluded |
+| `include_relationships` | boolean | `false` | Include 1:N, N:1, and N:N relationship metadata |
+| `response_format` | `markdown` \| `json` | `markdown` | Response format |
 
----
+### `dataverse_query_data`
 
-### `dataverse_query_data` — чтение данных
+Queries records from any Dataverse table with OData-style filtering.
 
-Запрашивает записи из любой таблицы с поддержкой OData-фильтрации.
+Example prompt:
 
+```text
+Show 10 active accounts sorted by name
 ```
-Покажи 10 активных аккаунтов, отсортированных по имени
-```
 
-| Параметр | Тип | По умолчанию | Описание |
+| Parameter | Type | Default | Description |
 |---|---|---|---|
-| `entity_set_name` | string | **обязателен** | EntitySet name таблицы (`accounts`, `contacts`, `leads`) |
-| `select` | string[] | — | Список колонок для возврата (`$select`) |
-| `filter` | string | — | OData-фильтр (`$filter`) |
-| `order_by` | string | — | Сортировка (`$orderby`) |
-| `top` | number | `50` | Количество записей (максимум 5000) |
-| `skip_token` | string | — | Токен для следующей страницы (из поля `skip_token` предыдущего ответа) |
-| `count` | boolean | `false` | Включить общее количество записей (`$count`) |
-| `response_format` | `json` \| `markdown` | `json` | Формат ответа |
+| `entity_set_name` | string | required | Table EntitySet name, for example `accounts`, `contacts`, `leads` |
+| `select` | string[] | — | Columns to return via `$select` |
+| `filter` | string | — | OData filter via `$filter` |
+| `order_by` | string | — | OData order clause via `$orderby` |
+| `top` | number | `50` | Number of records to return, max `5000` |
+| `skip_token` | string | — | Token for the next page from the previous response |
+| `count` | boolean | `false` | Include total record count via `$count=true` |
+| `response_format` | `json` \| `markdown` | `json` | Response format |
 
-**Примеры фильтров:**
+Example filters:
 
-```
+```text
 statecode eq 0
 name eq 'Contoso Ltd'
 revenue gt 100000
@@ -59,32 +69,63 @@ contains(name, 'corp')
 statecode eq 0 and revenue gt 50000
 ```
 
----
+## Installation
 
-## Установка и запуск
+### Prerequisites
 
-### 1. Зависимости
+- Node.js 18+
+- A Microsoft Dataverse environment
+- A Microsoft Entra ID app registration with Dataverse API access
+
+### Install dependencies
 
 ```bash
 npm install
 npm run build
 ```
 
-### 2. Переменные окружения
+### Required environment variables
 
-| Переменная | Описание |
+| Variable | Description |
 |---|---|
-| `DATAVERSE_URL` | URL вашей Dataverse-среды, например `https://yourorg.crm.dynamics.com` |
-| `AZURE_TENANT_ID` | ID тенанта Microsoft Entra ID |
-| `AZURE_CLIENT_ID` | Client ID зарегистрированного приложения |
-| `AZURE_CLIENT_SECRET` | Client Secret зарегистрированного приложения |
+| `DATAVERSE_URL` | Your Dataverse environment URL, for example `https://yourorg.crm.dynamics.com` |
+| `AZURE_TENANT_ID` | Microsoft Entra ID tenant ID |
+| `AZURE_CLIENT_ID` | App registration client ID |
+| `AZURE_CLIENT_SECRET` | App registration client secret |
 
-### 3. Подключение к Claude Desktop
+## Connecting MCP Clients
 
-Добавьте в файл конфигурации Claude Desktop:
+### Codex
 
-- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+Add the server to `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.dataversemcp]
+command = "node"
+args = ["/absolute/path/to/DataverseMCP/dist/index.js"]
+
+[mcp_servers.dataversemcp.env]
+DATAVERSE_URL = "https://yourorg.crm.dynamics.com"
+AZURE_TENANT_ID = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+AZURE_CLIENT_ID = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+AZURE_CLIENT_SECRET = "your-client-secret"
+```
+
+If you want Codex to trust the project directory automatically, add a project entry:
+
+```toml
+[projects."/absolute/path/to/your/project"]
+trust_level = "trusted"
+```
+
+After updating the config, restart Codex and confirm that the MCP server appears in the available tools list.
+
+### Claude Desktop
+
+Add the server to the Claude Desktop MCP config file:
+
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
 
 ```json
 {
@@ -103,63 +144,74 @@ npm run build
 }
 ```
 
-### 4. Проверка через MCP Inspector
+Restart Claude Desktop after updating the config.
+
+### MCP Inspector
+
+Use MCP Inspector for local testing:
 
 ```bash
 npx @modelcontextprotocol/inspector node dist/index.js
 ```
 
----
+## Dataverse setup
 
-## Настройка Dataverse
+### 1. Register an app in Microsoft Entra ID
 
-### Шаг 1: Регистрация приложения в Microsoft Entra ID
+1. Open [portal.azure.com](https://portal.azure.com)
+2. Go to `Microsoft Entra ID` > `App registrations` > `New registration`
+3. Create an app, for example `DataverseMCPServer`
+4. Copy the `Application (client) ID` and `Directory (tenant) ID`
+5. Go to `Certificates & secrets` and create a client secret
 
-1. Перейдите в [portal.azure.com](https://portal.azure.com) → **Microsoft Entra ID** → **App registrations** → **New registration**
-2. Укажите имя (например, `DataverseMCPServer`) и нажмите **Register**
-3. Скопируйте **Application (client) ID** и **Directory (tenant) ID**
-4. Перейдите в **Certificates & secrets** → **New client secret**, скопируйте значение
+### 2. Create an Application User in Dataverse
 
-### Шаг 2: Создание Application User в Dataverse
+1. Open [Power Platform Admin Center](https://admin.powerplatform.microsoft.com)
+2. Select your environment
+3. Go to `Settings` > `Users + permissions` > `Application users`
+4. Create a new application user for the app from step 1
 
-1. Откройте [Power Platform Admin Center](https://admin.powerplatform.microsoft.com)
-2. Выберите вашу среду → **Settings** → **Users + permissions** → **Application users**
-3. Нажмите **New app user** → выберите приложение из Шага 1
-4. Нажмите **Create**
+### 3. Assign a security role
 
-### Шаг 3: Назначение Security Role
+1. Open the application user
+2. Edit security roles
+3. Assign a role with read access to the required tables, for example `Basic User` or a custom role
 
-1. В списке Application Users найдите созданного пользователя
-2. Нажмите **Edit security roles**
-3. Назначьте роль с правами на чтение нужных таблиц (например, **Basic User** или кастомную роль)
+## Project structure
 
----
-
-## Структура проекта
-
-```
+```text
 dataverse-mcp-server/
 ├── src/
-│   ├── index.ts                # Точка входа: McpServer + StdioTransport
-│   ├── constants.ts            # Константы: версия API, лимиты
-│   ├── types.ts                # TypeScript-интерфейсы для Dataverse API
+│   ├── index.ts
+│   ├── constants.ts
+│   ├── types.ts
 │   ├── schemas/
-│   │   └── index.ts            # Zod-схемы входных параметров инструментов
+│   │   └── index.ts
 │   ├── services/
-│   │   └── dataverse.ts        # DataverseClient: MSAL-аутентификация и HTTP
+│   │   └── dataverse.ts
 │   └── tools/
-│       ├── get-schema.ts       # Инструмент dataverse_get_schema
-│       └── query-data.ts       # Инструмент dataverse_query_data
-├── dist/                       # Скомпилированный JavaScript
+│       ├── get-schema.ts
+│       └── query-data.ts
+├── dist/
 ├── package.json
 └── tsconfig.json
 ```
 
-## Команды разработки
+## Development commands
 
 ```bash
-npm run dev      # Запуск с авторестартом (tsx watch)
-npm run build    # Компиляция TypeScript → dist/
-npm run clean    # Очистка dist/
-npm start        # Запуск скомпилированного сервера
+npm run dev
+npm run build
+npm run clean
+npm start
 ```
+
+## Notes on schema filtering
+
+`dataverse_get_schema` intentionally excludes columns that are misleading for OData querying, including:
+
+- attributes with `AttributeType = Virtual`
+- companion/display attributes marked as non-queryable by Dataverse metadata
+- derived companion attributes linked through `AttributeOf`
+
+This reduces invalid `$select` suggestions and helps keep schema output focused on fields that are practical to query through `dataverse_query_data`.
