@@ -45,7 +45,7 @@ async function listEntities(client, format) {
 async function getEntitySchema(client, entityName, includeColumns, includeRelationships, format) {
     const expandParts = [];
     if (includeColumns) {
-        expandParts.push("Attributes($select=LogicalName,SchemaName,DisplayName,AttributeType,AttributeOf,IsLogical,IsValidODataAttribute,IsValidForRead,IsValidForCreate,IsValidForUpdate,RequiredLevel,IsPrimaryId,IsPrimaryName)");
+        expandParts.push("Attributes($select=LogicalName,SchemaName,DisplayName,AttributeType,AttributeOf,IsLogical,IsValidODataAttribute,IsValidForRead,IsValidForCreate,IsValidForUpdate,RequiredLevel,IsPrimaryId,IsPrimaryName,Description)");
     }
     if (includeRelationships) {
         expandParts.push("OneToManyRelationships($select=SchemaName,ReferencedEntity,ReferencingEntity,ReferencedAttribute,ReferencingAttribute)", "ManyToOneRelationships($select=SchemaName,ReferencedEntity,ReferencingEntity,ReferencedAttribute,ReferencingAttribute)", "ManyToManyRelationships($select=SchemaName,Entity1LogicalName,Entity2LogicalName)");
@@ -82,12 +82,13 @@ async function getEntitySchema(client, entityName, includeColumns, includeRelati
         lines.push(`| Description | ${desc} |`);
     if (includeColumns && entity.Attributes && entity.Attributes.length > 0) {
         lines.push("", `## Columns (${entity.Attributes.length})`, "");
-        lines.push("| Logical Name | Display Name | Type | Required | Readable | Creatable | Updatable |");
-        lines.push("|---|---|---|---|---|---|---|");
+        lines.push("| Logical Name | Display Name | Type | Required | Readable | Creatable | Updatable | Description |");
+        lines.push("|---|---|---|---|---|---|---|---|");
         const sorted = [...entity.Attributes].sort((a, b) => a.LogicalName.localeCompare(b.LogicalName));
         for (const attr of sorted) {
             const req = attr.RequiredLevel?.Value ?? "";
-            lines.push(`| \`${attr.LogicalName}\` | ${getLabel(attr.DisplayName)} | ${formatAttributeType(attr)} | ${req} | ${attr.IsValidForRead ? "✓" : ""} | ${attr.IsValidForCreate ? "✓" : ""} | ${attr.IsValidForUpdate ? "✓" : ""} |`);
+            const desc = getLabel(attr.Description);
+            lines.push(`| \`${attr.LogicalName}\` | ${getLabel(attr.DisplayName)} | ${formatAttributeType(attr)} | ${req} | ${attr.IsValidForRead ? "✓" : ""} | ${attr.IsValidForCreate ? "✓" : ""} | ${attr.IsValidForUpdate ? "✓" : ""} | ${desc} |`);
         }
     }
     if (includeRelationships) {
